@@ -35,6 +35,7 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 	private Topography topography;
 	private IPotentialFieldTarget potentialFieldTarget;
 	private int totalInfected = 0;
+	private int RecoveredP=0;
 	private double updateStepCounter = 1.0;//added
 	private double updateStep = 1.0;//added - time between infection updates in seconds
 
@@ -67,8 +68,7 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 	}
 
 	private int getFreeGroupId() {
-		if(this.random.nextDouble() < this.attributesSIRG.getInfectionRate()
-        || this.totalInfected < this.attributesSIRG.getInfectionsAtStart()) {
+		if(this.totalInfected < this.attributesSIRG.getInfectionsAtStart()) {
 			if(!getGroupsById().containsKey(SIRType.ID_INFECTED.ordinal()))
 			{
 				SIRGroup g = getNewGroup(SIRType.ID_INFECTED.ordinal(), Integer.MAX_VALUE/2);
@@ -77,7 +77,18 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
             this.totalInfected += 1;
 			return SIRType.ID_INFECTED.ordinal();
 		}
-		else{
+		/* CHANGES BY AFAG----------------------------------*/
+		if (this.random.nextDouble() < this.attributesSIRG.getRecoveryRate()){
+			if(!getGroupsById().containsKey(SIRType.ID_RECOVERED.ordinal()))
+			{
+				SIRGroup a = getNewGroup(SIRType.ID_RECOVERED.ordinal(), Integer.MAX_VALUE/2);
+				getGroupsById().put(SIRType.ID_RECOVERED.ordinal(), a);
+			}
+			this.RecoveredP+=1;
+			return SIRType.ID_RECOVERED.ordinal();
+		}
+		/* ************************************************************************* */
+		else {
 			if(!getGroupsById().containsKey(SIRType.ID_SUSCEPTIBLE.ordinal()))
 			{
 				SIRGroup g = getNewGroup(SIRType.ID_SUSCEPTIBLE.ordinal(), Integer.MAX_VALUE/2);
@@ -85,6 +96,7 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 			}
 			return SIRType.ID_SUSCEPTIBLE.ordinal();
 		}
+		
 	}
 
 
@@ -202,11 +214,13 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 		if (c.getElements().size() > 0) {
 			LinkedCellsGrid myGrid = topography.getSpatialMap(Pedestrian.class);
 			for(Pedestrian p : c.getElements()) {
+				
 				// loop over neighbors and set infected if we are close
 				List<Pedestrian> neighbors = myGrid.getObjects(p.getPosition(),attributesSIRG.getInfectionMaxDistance());
 				for(Pedestrian p_neighbor : neighbors) {
 					if(p == p_neighbor || getGroup(p_neighbor).getID() != SIRType.ID_INFECTED.ordinal())
 						continue;
+						
 					if (this.random.nextDouble() < attributesSIRG.getInfectionRate()) {
 						SIRGroup g = getGroup(p);
 						if (g.getID() == SIRType.ID_SUSCEPTIBLE.ordinal()) {
@@ -214,7 +228,18 @@ public class SIRGroupModel extends AbstractGroupModel<SIRGroup> {
 							assignToGroup(p, SIRType.ID_INFECTED.ordinal());
 						}
 					}
+					
+
+
 				}
+				if (this.random.nextDouble() < attributesSIRG.getRecoveryRate()) {
+					SIRGroup a = getGroup(p);
+					if (a.getID()==SIRType.ID_INFECTED.ordinal()) {
+						elementRemoved(p);
+						assignToGroup(p,SIRType.ID_RECOVERED.ordinal());
+					}
+					}
+				
 			}
 		}
 		/* // old calculation
